@@ -76,7 +76,7 @@ using (WebClient client = new WebClient())
     foreach (var url in downloadUrls)
     {
         string directoryPath = $"{System.IO.Directory.GetCurrentDirectory()}/images/{url.Brand}";
-        Console.WriteLine($"PATH: {directoryPath}");
+
         if (!Directory.Exists(directoryPath))
         {
             Directory.CreateDirectory(directoryPath);
@@ -92,7 +92,7 @@ using (WebClient client = new WebClient())
         else
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("File already exists");
+            Console.WriteLine($"File {imagePath} already exists");
             Console.ResetColor();
         }
     }
