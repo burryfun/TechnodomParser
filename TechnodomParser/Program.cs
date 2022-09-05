@@ -3,7 +3,7 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Firefox;
 using System.Net;
 
-string[] brands = { "samsung", "apple" };
+string[] brands = { "apple", "samsung", "huawei", "sony" };
 string URL = $"https://www.technodom.kz/catalog/smartfony-i-gadzhety/smartfony-i-telefony/smartfony/f/brands";
 int DELAY = 500; // msec
 
@@ -22,31 +22,49 @@ using (WebDriver driver = new ChromeDriver())
 
         var pages = driver.FindElements(By.CssSelector("div.Paginator__List-Item"));
 
-        for (int i = 1; i < pages.Count; i++)
+        if (pages.Count() == 0)
         {
-            ScrollToEndPage(driver);
-
-            var images = driver.FindElements(By.CssSelector("img.LazyImage__Source"));
-            foreach (var image in images)
+            var totalOnPage = SaveImagesUrlsByBrand(driver, brand);
+            Console.WriteLine($"Images for {brand} from 1 page: {totalOnPage}");
+        }
+        else
+        {
+            for (int i = 0; i < pages.Count; i++)
             {
-                string title = image.GetAttribute("title").ToLower();
-                string imageUrl = image.GetAttribute("src");
 
-                if (title.IndexOf(brand) == -1)
-                {
-                    continue;
-                }
+                driver.Navigate().GoToUrl($"{brandURL}?page={i + 1}");
+                Thread.Sleep(DELAY);
 
-                downloadUrls.Add(new DownoloadUrl { Brand = brand, Title = title, Url = imageUrl });
+                var totalOnPage = SaveImagesUrlsByBrand(driver, brand);
+
+                Console.WriteLine($"Images for {brand} from {i + 1} page: {totalOnPage}");
+
             }
-
-            Console.WriteLine($"Images from {i} pages: {downloadUrls.Count}");
-
-            //driver.ExecuteScript($"document.getElementsByClassName(\"Paginator__List-Item\")[{i}].click();");
-            driver.Navigate().GoToUrl($"{brandURL}?page={i + 1}");
-            Thread.Sleep(DELAY);
         }
     }
+}
+
+int SaveImagesUrlsByBrand(WebDriver driver, string brand)
+{
+    int total = 0;
+    ScrollToEndPage(driver);
+
+    var images = driver.FindElements(By.CssSelector("img.LazyImage__Source"));
+
+    foreach (var image in images)
+    {
+        string title = image.GetAttribute("title").ToLower();
+        string imageUrl = image.GetAttribute("src");
+
+        if (title.IndexOf(brand) == -1)
+        {
+            continue;
+        }
+
+        downloadUrls.Add(new DownoloadUrl { Brand = brand, Title = title, Url = imageUrl });
+        total++;
+    }
+    return total;
 }
 
 /*
@@ -54,9 +72,11 @@ using (WebDriver driver = new ChromeDriver())
   */
 using (WebClient client = new WebClient())
 {
+    int i = 1;
     foreach (var url in downloadUrls)
     {
         string directoryPath = $"{System.IO.Directory.GetCurrentDirectory()}/images/{url.Brand}";
+        Console.WriteLine($"PATH: {directoryPath}");
         if (!Directory.Exists(directoryPath))
         {
             Directory.CreateDirectory(directoryPath);
@@ -68,6 +88,12 @@ using (WebClient client = new WebClient())
             Console.WriteLine($"Downloading {url.Title} ...");
             client.DownloadFile(url.Url, imagePath);
             Console.WriteLine($"Successfully Downloaded File {url.Title}");
+        }
+        else
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("File already exists");
+            Console.ResetColor();
         }
     }
 }
